@@ -1,34 +1,30 @@
 const assert = require('assert');
 const ganache = require('ganache-cli');
 const Web3 = require('web3');
+const { interface, bytecode } = require('../compiler');
 
-const web3Provider = new Web3(ganache.provider());
+const HI_THERE = 'hi there';
+const web3 = new Web3(ganache.provider());
 
-// mockData 
+let accounts;
+let inbox;
 
-class Car
-{
-    park ()
-    {
-        return 'stopped';
-    }
+beforeEach(async () => {
+  accounts = await web3.eth.getAccounts();
+  inbox = await new web3.eth.Contract(JSON.parse(interface))
+    .deploy({ data: bytecode, arguments: [HI_THERE] })
+    .send({ from: accounts[0], gas: 1000000 });
+});
 
-    drive ()
-    {
-        return 'vroom';
-    }
-}
+describe('Inbox Deployment', () => {
+  it('should deployed successfully and should return Gananche address  ', () => {
+    assert.ok(inbox.options.address);
+  });
 
-describe('Car', () =>
-{ 
-    const car_1= new Car();
-    it('should return stopped when called Park ', () =>
-    {
-        assert.equal(car_1.park(),'stopped')
-    })
+  it('should set new value to message ', async () => {
+    await inbox.methods.setMessage('NewMessage').send({ from: accounts[0] });
+    const message = await inbox.methods.message().call();
 
-    it('should return vroom when called Drive', () =>
-    {
-        assert.equal(car_1.drive(),'vroom')
-    })
-})
+    assert.equal(message, 'NewMessage');
+  });
+});
